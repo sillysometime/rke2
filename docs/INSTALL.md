@@ -6,3 +6,5 @@ ssh-keygen -t rsa -b 4096
 ssh-copy-id root@10.0.1.10  # master-01
 ssh-copy-id root@10.0.1.20  # worker-01
 ssh-copy-id root@10.0.1.21  # worker-02
+
+sudo yum --enablerepo=* install container-selinux

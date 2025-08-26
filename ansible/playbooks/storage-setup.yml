@@ -1,0 +1,82 @@
+---
+- name: Configure RKE2 storage paths
+  block:
+    - name: Create base directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ storage.owner }}"
+        group: "{{ storage.group }}"
+        mode: "{{ storage.mode }}"
+      with_items:
+        - "{{ paths.config_dir }}"
+        - "{{ paths.data_dir }}"
+        - "{{ paths.log_dir }}"
+        - "{{ paths.etcd_dir }}"
+        - "{{ paths.containerd_dir }}"
+        - "{{ paths.kubelet_dir }}"
+        - "{{ paths.audit_log_dir }}"
+        - "{{ paths.containerd_log_dir }}"
+      when: storage.create_paths | default(true)
+
+    - name: Create runtime directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ storage.owner }}"
+        group: "{{ storage.group }}"
+        mode: "0755"
+      with_items:
+        - "{{ paths.runtime_dir }}"
+        - "{{ paths.runtime_dir }}/containerd"
+
+    - name: Configure logrotate for RKE2 logs
+      copy:
+        dest: /etc/logrotate.d/rke2
+        content: |
+          {{ paths.log_dir }}/*.log {
+            daily
+            rotate 7
+            compress
+            missingok
+            notifempty
+            create 0640 root root
+          }
+          
+          {{ paths.audit_log_dir }}/*.log {
+            daily
+            rotate 30
+            compress
+            missingok
+            notifempty
+            create 0640 root root
+            sharedscripts
+            postrotate
+                /bin/kill -HUP `pidof kube-apiserver` >/dev/null 2>&1 || true
+            endscript
+          }
+          
+          {{ paths.containerd_log_dir }}/*.log {
+            daily
+            rotate 7
+            compress
+            missingok
+            notifempty
+            create 0640 root root
+          }
+        mode: '0644'
+
+    - name: Create symlinks for backwards compatibility
+      file:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        state: link
+        force: yes
+      with_items:
+        - { src: "{{ paths.data_dir }}", dest: "/var/lib/rancher/rke2" }
+        - { src: "{{ paths.log_dir }}", dest: "/var/log/rke2" }
+      when: storage.create_paths | default(true)
+
+  when:
+    - ansible_distribution == "OracleLinux"
+    - ansible_distribution_major_version == "7"

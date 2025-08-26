@@ -9,6 +9,9 @@
     - name: Include Oracle Linux setup
       include_tasks: oracle-setup.yml
       
+    - name: Include storage setup
+      include_tasks: storage-setup.yml
+      
     - name: Include prerequisites playbook
       include_tasks: prerequisites.yml
       

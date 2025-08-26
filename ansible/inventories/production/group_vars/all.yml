@@ -20,12 +20,34 @@ cluster_dns: "10.43.0.10"
 rke2_download_url: "https://get.rke2.io"
 
 # Installation settings
-rke2_config_dir: "/etc/rancher/rke2"
-rke2_data_dir: "/var/lib/rancher/rke2"
 rke2_install_method: "rpm"
 rke2_rpm_repo_url: "https://rpm.rancher.io"
-rke2_bin_dir: "/usr/local/bin"
-rke2_runtime_dir: "/run/rke2"
+
+# RKE2 Path configurations
+paths:
+  # Main directories
+  config_dir: "/etc/rancher/rke2"                    # ไดเรกทอรีสำหรับ configuration files
+  data_dir: "/data/rancher/rke2"                     # ไดเรกทอรีหลักสำหรับข้อมูล RKE2
+  bin_dir: "/usr/local/bin"                          # ไดเรกทอรีสำหรับ binary files
+  runtime_dir: "/run/rke2"                           # ไดเรกทอรีสำหรับ runtime files
+
+  # Data subdirectories
+  etcd_dir: "/data/rancher/rke2/etcd"               # ข้อมูล etcd (แยกเพื่อประสิทธิภาพ)
+  containerd_dir: "/data/rancher/rke2/containerd"    # ข้อมูล containerd
+  kubelet_dir: "/data/rancher/rke2/agent/kubelet"    # ข้อมูล kubelet
+
+  # Log directories
+  log_dir: "/var/log/rancher/rke2"                   # logs ทั่วไป
+  audit_log_dir: "/var/log/rancher/rke2/audit"       # kubernetes audit logs
+  containerd_log_dir: "/var/log/rancher/rke2/containerd"  # containerd logs
+
+# Storage configurations
+storage:
+  create_paths: true                    # สร้าง paths อัตโนมัติ
+  set_permissions: true                 # กำหนด permissions อัตโนมัติ
+  owner: "root"                         # owner ของไดเรกทอรี
+  group: "root"                         # group ของไดเรกทอรี
+  mode: "0750"                         # default permissions
 
 # Oracle Linux Repository settings
 ol7_optional_latest: true
