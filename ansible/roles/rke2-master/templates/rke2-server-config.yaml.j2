@@ -1,0 +1,57 @@
+---
+# RKE2 Server configuration file
+write-kubeconfig-mode: "0644"
+tls-san:
+  - "{{ ansible_host }}"
+  {% if additional_sans is defined %}
+  {% for san in additional_sans %}
+  - "{{ san }}"
+  {% endfor %}
+  {% endif %}
+
+# Networking
+cluster-cidr: "{{ cluster_cidr }}"
+service-cidr: "{{ service_cidr }}"
+cluster-dns: "{{ cluster_dns }}"
+
+# Token for joining nodes
+token: "{{ rke2_token | default('') }}"
+
+{% if groups['masters'] | length > 1 %}
+server: "https://{{ hostvars[groups['masters'][0]]['ansible_host'] }}:9345"
+{% if inventory_hostname != groups['masters'][0] %}
+token-file: "{{ rke2_data_dir }}/server/node-token"
+{% endif %}
+{% endif %}
+
+# Container runtime configuration
+container-runtime-endpoint: "unix:///run/k3s/containerd/containerd.sock"
+{% if container_runtime is defined %}
+container-runtime: "{{ container_runtime }}"
+{% endif %}
+
+# Additional configuration
+disable:
+{% if disable_components is defined %}
+{% for component in disable_components %}
+  - "{{ component }}"
+{% endfor %}
+{% endif %}
+
+# System settings
+system-default-registry: "{{ system_default_registry | default('') }}"
+{% if private_registry is defined %}
+private-registry: "{{ private_registry }}"
+{% endif %}
+
+# Network policies
+{% if network_policy is defined %}
+network-policy: {{ network_policy }}
+{% endif %}
+
+# Additional server args
+{% if server_additional_args is defined %}
+{% for arg in server_additional_args %}
+{{ arg }}
+{% endfor %}
+{% endif %}
