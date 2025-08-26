@@ -6,6 +6,9 @@
   serial: 1
   
   tasks:
+    - name: Include Oracle Linux setup
+      include_tasks: oracle-setup.yml
+      
     - name: Include prerequisites playbook
       include_tasks: prerequisites.yml
       

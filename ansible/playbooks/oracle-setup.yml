@@ -1,0 +1,130 @@
+---
+- name: Configure Oracle Linux 7.9 specific settings
+  block:
+    - name: Enable Oracle Linux repositories
+      command: yum-config-manager --enable {{ item }}
+      with_items:
+        - ol7_latest
+        - ol7_optional_latest
+        - ol7_addons
+        - ol7_UEKR6
+      args:
+        warn: false
+      when: ansible_distribution == "OracleLinux"
+
+    - name: Install EPEL repository
+      yum:
+        name: oracle-epel-release-el7
+        state: present
+      when: epel_repository | default(true)
+
+    - name: Update all packages
+      yum:
+        name: '*'
+        state: latest
+      when: update_packages | default(true)
+
+    - name: Install required packages
+      yum:
+        name:
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+          - container-selinux
+          - iptables
+          - libnetfilter_conntrack
+          - libnfnetlink
+          - libnftnl
+          - policycoreutils-python
+          - conntrack-tools
+          - socat
+          - nfs-utils
+          - iscsi-initiator-utils
+          - tar
+          - rsync
+        state: present
+
+    - name: Configure kernel modules
+      copy:
+        dest: /etc/modules-load.d/rke2-prerequisites.conf
+        content: |
+          overlay
+          br_netfilter
+          nf_conntrack
+          ip_vs
+          ip_vs_rr
+          ip_vs_wrr
+          ip_vs_sh
+          nf_conntrack_ipv4
+          nf_conntrack_ipv6
+        mode: '0644'
+
+    - name: Load kernel modules
+      modprobe:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - overlay
+        - br_netfilter
+        - nf_conntrack
+        - ip_vs
+        - ip_vs_rr
+        - ip_vs_wrr
+        - ip_vs_sh
+        - nf_conntrack_ipv4
+        - nf_conntrack_ipv6
+      ignore_errors: yes
+
+    - name: Configure sysctl parameters
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: yes
+        sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+      with_items:
+        - { key: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+        - { key: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
+        - { key: 'net.ipv4.ip_forward', value: '1' }
+        - { key: 'net.ipv4.conf.all.forwarding', value: '1' }
+        - { key: 'net.ipv6.conf.all.forwarding', value: '1' }
+        - { key: 'net.ipv4.conf.all.rp_filter', value: '1' }
+        - { key: 'net.ipv4.conf.default.rp_filter', value: '1' }
+        - { key: 'fs.inotify.max_user_watches', value: '524288' }
+        - { key: 'fs.inotify.max_user_instances', value: '512' }
+        - { key: 'vm.max_map_count', value: '262144' }
+        - { key: 'vm.swappiness', value: '0' }
+        - { key: 'kernel.panic', value: '10' }
+
+    - name: Disable SELinux
+      selinux:
+        state: disabled
+      when: not selinux_enabled | default(false)
+
+    - name: Stop and disable firewalld
+      systemd:
+        name: firewalld
+        state: stopped
+        enabled: no
+      when: disable_firewall | default(true)
+
+    - name: Disable swap in fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+.*)$'
+        replace: '# \1'
+        backup: yes
+
+    - name: Disable swap
+      command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+
+    - name: Enable and start chronyd
+      systemd:
+        name: chronyd
+        state: started
+        enabled: yes
+
+  when:
+    - ansible_distribution == "OracleLinux"
+    - ansible_distribution_major_version == "7"
