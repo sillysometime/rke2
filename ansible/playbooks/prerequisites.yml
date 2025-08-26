@@ -1,4 +1,14 @@
 ---
+- name: Remove old RKE2 repository
+  file:
+    path: "/etc/yum.repos.d/rancher-rke2-1.28-stable.repo"
+    state: absent
+  when: ansible_os_family == "RedHat"
+
+- name: Clean yum cache
+  shell: yum clean all
+  when: ansible_os_family == "RedHat"
+
 - name: Update package cache (Ubuntu/Debian)
   apt:
     update_cache: yes
@@ -9,6 +19,12 @@
   yum:
     update_cache: yes
   when: ansible_os_family == "RedHat"
+
+- name: Install EPEL repository for Oracle Linux
+  yum:
+    name: oracle-epel-release-el7
+    state: present
+  when: ansible_distribution == "OracleLinux" and ansible_distribution_major_version == "7"
 
 - name: Install required packages (Ubuntu/Debian)
   apt:
