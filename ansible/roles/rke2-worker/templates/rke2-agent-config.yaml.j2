@@ -1,0 +1,38 @@
+---
+# RKE2 Agent configuration file
+server: "https://{{ hostvars[groups['masters'][0]]['ansible_host'] }}:9345"
+token: "{{ hostvars[groups['masters'][0]]['rke2_token'] | default('') }}"
+
+# Container runtime configuration
+container-runtime-endpoint: "unix:///run/k3s/containerd/containerd.sock"
+{% if container_runtime is defined %}
+container-runtime: "{{ container_runtime }}"
+{% endif %}
+
+# System default registry
+system-default-registry: "{{ system_default_registry | default('') }}"
+{% if private_registry is defined %}
+private-registry: "{{ private_registry }}"
+{% endif %}
+
+# Node labels and taints
+{% if node_labels is defined %}
+node-label:
+{% for label in node_labels %}
+  - "{{ label }}"
+{% endfor %}
+{% endif %}
+
+{% if node_taints is defined %}
+node-taint:
+{% for taint in node_taints %}
+  - "{{ taint }}"
+{% endfor %}
+{% endif %}
+
+# Additional agent configuration
+{% if agent_additional_args is defined %}
+{% for arg in agent_additional_args %}
+{{ arg }}
+{% endfor %}
+{% endif %}

@@ -23,7 +23,7 @@
 
 - name: Create RKE2 config file for workers
   template:
-    src: rke2-agent-config.yaml.j2
+    src: "../roles/rke2-worker/templates/rke2-agent-config.yaml.j2"
     dest: "{{ rke2_config_dir }}/config.yaml"
     mode: '0640'
   when: rke2_type == "agent"
