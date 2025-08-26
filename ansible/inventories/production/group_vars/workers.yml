@@ -1,0 +1,6 @@
+---
+rke2_type: agent
+
+# Worker specific configuration
+rke2_config:
+  server: "https://{{ hostvars[groups['masters'][0]]['ansible_default_ipv4']['address'] }}:9345"

@@ -1,0 +1,76 @@
+---
+- name: Create RKE2 config directory
+  file:
+    path: "{{ rke2_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Get node token from first master
+  slurp:
+    src: "{{ rke2_data_dir }}/server/node-token"
+  register: node_token
+  delegate_to: "{{ groups['masters'][0] }}"
+  when: 
+    - rke2_type == "agent" or inventory_hostname != groups['masters'][0]
+    - groups['masters'] | length > 0
+
+- name: Create RKE2 config file for masters
+  template:
+    src: rke2-server-config.yaml.j2
+    dest: "{{ rke2_config_dir }}/config.yaml"
+    mode: '0640'
+  when: rke2_type == "server"
+
+- name: Create RKE2 config file for workers
+  template:
+    src: rke2-agent-config.yaml.j2
+    dest: "{{ rke2_config_dir }}/config.yaml"
+    mode: '0640'
+  when: rke2_type == "agent"
+
+- name: Download RKE2 installation script
+  get_url:
+    url: "{{ rke2_download_url }}"
+    dest: /tmp/rke2-install.sh
+    mode: '0755'
+
+- name: Install RKE2 server
+  shell: |
+    INSTALL_RKE2_VERSION="{{ rke2_version }}" \
+    INSTALL_RKE2_CHANNEL="{{ rke2_channel }}" \
+    /tmp/rke2-install.sh
+  when: rke2_type == "server"
+
+- name: Install RKE2 agent
+  shell: |
+    INSTALL_RKE2_VERSION="{{ rke2_version }}" \
+    INSTALL_RKE2_CHANNEL="{{ rke2_channel }}" \
+    INSTALL_RKE2_TYPE="agent" \
+    /tmp/rke2-install.sh
+  when: rke2_type == "agent"
+
+- name: Enable and start RKE2 server service
+  systemd:
+    name: rke2-server
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  when: rke2_type == "server"
+
+- name: Enable and start RKE2 agent service
+  systemd:
+    name: rke2-agent
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  when: rke2_type == "agent"
+
+- name: Wait for RKE2 server to be ready
+  wait_for:
+    path: /etc/rancher/rke2/rke2.yaml
+    timeout: 300
+  when: rke2_type == "server"
+
+- name: Wait for RKE2 to start
+  pause:
+    seconds: 30

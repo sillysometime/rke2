@@ -1,0 +1,20 @@
+---
+rke2_type: server
+
+# Master specific configuration
+rke2_config:
+  write-kubeconfig-mode: "0644"
+  tls-san:
+    - "{{ ansible_default_ipv4.address }}"
+    - "k8s-api.yourdomain.com"
+  cluster-cidr: "{{ cluster_cidr }}"
+  service-cidr: "{{ service_cidr }}"
+  cluster-dns: "{{ cluster_dns }}"
+  disable:
+    - rke2-ingress-nginx
+  node-taint:
+    - "CriticalAddonsOnly=true:NoExecute"
+
+# HA configuration (for multi-master setup)
+rke2_ha_mode: true
+rke2_registration_address: "{{ groups['masters'][0] }}"

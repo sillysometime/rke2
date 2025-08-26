@@ -1,0 +1,52 @@
+---
+- name: Install RKE2 Cluster
+  hosts: all
+  become: yes
+  gather_facts: yes
+  serial: 1
+  
+  tasks:
+    - name: Include prerequisites playbook
+      include_tasks: prerequisites.yml
+
+- name: Install RKE2 Masters
+  hosts: masters
+  become: yes
+  gather_facts: yes
+  serial: 1
+  
+  tasks:
+    - name: Include master installation
+      include_tasks: install-rke2.yml
+      
+    - name: Wait for first master to be ready
+      wait_for:
+        port: 6443
+        host: "{{ ansible_default_ipv4.address }}"
+        delay: 10
+        timeout: 300
+      when: inventory_hostname == groups['masters'][0]
+
+- name: Install RKE2 Workers
+  hosts: workers
+  become: yes
+  gather_facts: yes
+  serial: 2
+  
+  tasks:
+    - name: Wait for masters to be ready
+      wait_for:
+        port: 9345
+        host: "{{ hostvars[groups['masters'][0]]['ansible_default_ipv4']['address'] }}"
+        timeout: 300
+        
+    - name: Include worker installation
+      include_tasks: install-rke2.yml
+
+- name: Post installation tasks
+  hosts: masters[0]
+  become: yes
+  
+  tasks:
+    - name: Include post-install tasks
+      include_tasks: post-install.yml

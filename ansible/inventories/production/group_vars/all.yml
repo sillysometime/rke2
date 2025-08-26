@@ -1,0 +1,38 @@
+---
+# RKE2 Common Variables
+rke2_version: "v1.28.8+rke2r1"
+rke2_channel: "stable"
+
+# System settings
+disable_firewall: true
+disable_swap: true
+
+# Oracle Linux specific settings
+oracle_linux_repo_enable: true
+container_runtime: "containerd"
+
+# Network settings
+cluster_cidr: "10.42.0.0/16"
+service_cidr: "10.43.0.0/16"
+cluster_dns: "10.43.0.10"
+
+# Download settings
+rke2_download_url: "https://get.rke2.io"
+
+# Directory paths
+rke2_config_dir: "/etc/rancher/rke2"
+rke2_data_dir: "/var/lib/rancher/rke2"
+
+# Security settings for Oracle Linux
+selinux_enabled: false
+selinux_mode: "permissive"  # หรือ "disabled" สำหรับ production
+
+# Oracle Linux 7 kernel requirements
+oracle_linux_kernel_modules:
+  - br_netfilter
+  - overlay
+  - ip_vs
+  - ip_vs_rr
+  - ip_vs_wrr
+  - ip_vs_sh
+  - nf_conntrack

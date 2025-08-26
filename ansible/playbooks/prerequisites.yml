@@ -1,0 +1,244 @@
+---
+- name: Update package cache (Ubuntu/Debian)
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Update package cache (CentOS/RHEL/Oracle Linux)
+  yum:
+    update_cache: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Install required packages (Ubuntu/Debian)
+  apt:
+    name:
+      - curl
+      - wget
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install required packages (CentOS/RHEL/Oracle Linux)
+  yum:
+    name:
+      - curl
+      - wget
+      - yum-utils
+      - container-selinux
+      - iptables
+      - libnetfilter_conntrack
+      - libnfnetlink
+      - libnftnl
+      - policycoreutils-python
+      - tar
+      - unzip
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Install Oracle Linux specific packages
+  yum:
+    name:
+      - oracle-epel-release-el7
+    state: present
+  when: 
+    - ansible_distribution == "OracleLinux"
+    - ansible_distribution_major_version == "7"
+  ignore_errors: yes
+
+- name: Enable EPEL repository for Oracle Linux 7
+  yum:
+    name: epel-release
+    state: present
+  when:
+    - ansible_distribution == "OracleLinux" 
+    - ansible_distribution_major_version == "7"
+  ignore_errors: yes
+
+
+- name: Disable swap
+  shell: |
+    swapoff -a
+    sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+  when: disable_swap | default(true)
+
+- name: Disable UFW firewall (Ubuntu)
+  ufw:
+    state: disabled
+  when: 
+    - ansible_os_family == "Debian"
+    - disable_firewall | default(true)
+  ignore_errors: yes
+
+- name: Stop and disable firewalld (CentOS/RHEL/Oracle Linux)
+  systemd:
+    name: firewalld
+    enabled: no
+    state: stopped
+  when: 
+    - ansible_os_family == "RedHat"
+    - disable_firewall | default(true)
+  ignore_errors: yes
+
+- name: Stop and disable iptables (Oracle Linux 7)
+  systemd:
+    name: "{{ item }}"
+    enabled: no
+    state: stopped
+  loop:
+    - iptables
+    - ip6tables
+  when:
+    - ansible_distribution == "OracleLinux"
+    - ansible_distribution_major_version == "7" 
+    - disable_firewall | default(true)
+  ignore_errors: yes
+
+- name: Set SELinux to permissive mode temporarily
+  selinux:
+    policy: targeted
+    state: permissive
+  when: 
+    - ansible_os_family == "RedHat"
+    - not selinux_enabled | default(false)
+  ignore_errors: yes
+
+- name: Disable SELinux permanently
+  selinux:
+    state: disabled
+  when: 
+    - ansible_os_family == "RedHat"
+    - not selinux_enabled | default(false)
+  ignore_errors: yes
+
+- name: Create modules-load.d directory
+  file:
+    path: /etc/modules-load.d
+    state: directory
+    mode: '0755'
+
+- name: Load kernel modules for Oracle Linux
+  copy:
+    content: |
+      br_netfilter
+      ip6_udp_tunnel
+      ip_set
+      ip_set_hash_ip
+      ip_set_hash_net
+      iptable_filter
+      iptable_nat
+      iptable_mangle
+      iptable_raw
+      nf_conntrack_netlink
+      nf_conntrack
+      nfnetlink
+      overlay
+      xt_addrtype
+      xt_conntrack
+      xt_comment
+      xt_mark
+      xt_multiport
+      xt_nat
+      xt_recent
+      xt_set
+      xt_statistic
+      xt_tcpudp
+    dest: /etc/modules-load.d/rke2.conf
+    mode: '0644'
+
+- name: Load kernel modules immediately
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - ip6_udp_tunnel
+    - ip_set
+    - ip_set_hash_ip
+    - ip_set_hash_net
+    - iptable_filter
+    - iptable_nat
+    - iptable_mangle
+    - iptable_raw
+    - nf_conntrack_netlink
+    - nf_conntrack
+    - nfnetlink
+    - overlay
+    - xt_addrtype
+    - xt_conntrack
+    - xt_comment
+    - xt_mark
+    - xt_multiport
+    - xt_nat
+    - xt_recent
+    - xt_set
+    - xt_statistic
+    - xt_tcpudp
+  ignore_errors: yes
+
+- name: Create sysctl configuration for RKE2
+  copy:
+    content: |
+      net.bridge.bridge-nf-call-iptables = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward = 1
+      vm.overcommit_memory = 1
+      kernel.panic = 10
+      kernel.panic_on_oops = 1
+      net.ipv4.conf.all.forwarding = 1
+      net.ipv6.conf.all.forwarding = 1
+      net.netfilter.nf_conntrack_max = 131072
+    dest: /etc/sysctl.d/90-rke2.conf
+    mode: '0644'
+
+- name: Apply sysctl settings
+  shell: sysctl --system
+  ignore_errors: yes
+
+- name: Check if container-selinux is installed (Oracle Linux)
+  yum:
+    list: container-selinux
+  register: container_selinux_check
+  when: 
+    - ansible_distribution == "OracleLinux"
+    - ansible_distribution_major_version == "7"
+
+- name: Install container-selinux from CentOS repo if not available
+  shell: |
+    yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.119.2-1.911c772.el7_8.noarch.rpm
+  when:
+    - ansible_distribution == "OracleLinux"
+    - ansible_distribution_major_version == "7"
+    - container_selinux_check.results | selectattr('name', 'equalto', 'container-selinux') | list | length == 0
+  ignore_errors: yes
+
+- name: Ensure time synchronization (Oracle Linux)
+  systemd:
+    name: chronyd
+    enabled: yes
+    state: started
+  when: ansible_distribution == "OracleLinux"
+
+- name: Create rancher directory
+  file:
+    path: /etc/rancher
+    state: directory
+    mode: '0755'
+
+- name: Check system requirements
+  debug:
+    msg: |
+      System Information:
+      - OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      - Kernel: {{ ansible_kernel }}
+      - Memory: {{ ansible_memtotal_mb }} MB
+      - CPU Cores: {{ ansible_processor_vcpus }}
+      - Architecture: {{ ansible_architecture }}
+      
+      RKE2 Requirements Check:
+      - Memory >= 4GB for masters: {{ 'OK' if ansible_memtotal_mb >= 4096 else 'WARNING: Less than 4GB RAM' }}
+      - Memory >= 2GB for workers: {{ 'OK' if ansible_memtotal_mb >= 2048 else 'WARNING: Less than 2GB RAM' }}
+      - Disk space check: Please ensure at least 50GB free space
