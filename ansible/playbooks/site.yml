@@ -8,6 +8,9 @@
   tasks:
     - name: Include prerequisites playbook
       include_tasks: prerequisites.yml
+      
+    - name: Include containerd setup
+      include_tasks: containerd-setup.yml
 
 - name: Install RKE2 Masters
   hosts: masters

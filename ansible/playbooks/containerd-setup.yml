@@ -1,0 +1,78 @@
+- name: Setup RKE2 containerd
+  block:
+    - name: Create required directories for RKE2 containerd
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      with_items:
+        - /run/containerd
+        - /var/lib/rancher/rke2/agent/containerd
+        - /var/lib/rancher/rke2/agent/etc/containerd
+        - /var/lib/rancher/rke2/data
+
+    - name: Configure RKE2 containerd
+      copy:
+        dest: /var/lib/rancher/rke2/agent/etc/containerd/config.toml
+        content: |
+          version = 2
+          root = "/var/lib/rancher/rke2/agent/containerd"
+          state = "/run/containerd"
+          [grpc]
+            address = "/run/containerd/containerd.sock"
+          [plugins]
+            [plugins."io.containerd.grpc.v1.cri"]
+              stream_server_address = "127.0.0.1"
+              stream_server_port = "10010"
+              enable_selinux = false
+              enable_unprivileged_ports = true
+              enable_unprivileged_icmp = true
+              sandbox_image = "rancher/pause:3.6"
+              systemd_cgroup = true
+        mode: '0644'
+
+    - name: Set correct permissions for RKE2 directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        recurse: yes
+      with_items:
+        - /var/lib/rancher/rke2
+        - /run/containerd
+
+    - name: Create RKE2 environment file
+      copy:
+        dest: /etc/sysconfig/rke2-server
+        content: |
+          RKE2_TOKEN="{{ rke2_token | default('') }}"
+          CRI_CONFIG_FILE="/var/lib/rancher/rke2/agent/etc/containerd/config.toml"
+        mode: '0644'
+      when: inventory_hostname in groups['masters']
+
+    - name: Create systemd override directory for RKE2
+      file:
+        path: /etc/systemd/system/rke2-server.service.d
+        state: directory
+        mode: '0755'
+      when: inventory_hostname in groups['masters']
+
+    - name: Configure RKE2 systemd override
+      copy:
+        dest: /etc/systemd/system/rke2-server.service.d/override.conf
+        content: |
+          [Service]
+          Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/lib/rancher/rke2/bin"
+          Environment="CRI_CONFIG_FILE=/var/lib/rancher/rke2/agent/etc/containerd/config.toml"
+          ExecStartPre=-/sbin/modprobe br_netfilter
+          ExecStartPre=-/sbin/modprobe overlay
+        mode: '0644'
+      when: inventory_hostname in groups['masters']
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+  when:
+    - ansible_distribution == "OracleLinux"
+    - ansible_distribution_major_version == "7"
