@@ -37,9 +37,9 @@ paths:
   kubelet_dir: "/data/rancher/rke2/agent/kubelet"    # ข้อมูล kubelet
 
   # Log directories
-  log_dir: "/var/log/rancher/rke2"                   # logs ทั่วไป
-  audit_log_dir: "/var/log/rancher/rke2/audit"       # kubernetes audit logs
-  containerd_log_dir: "/var/log/rancher/rke2/containerd"  # containerd logs
+  log_dir: "/sfi/var/log/rancher/rke2"                   # logs ทั่วไป
+  audit_log_dir: "/sfi/var/log/rancher/rke2/audit"       # kubernetes audit logs
+  containerd_log_dir: "/sfi/var/log/rancher/rke2/containerd"  # containerd logs
 
 # Storage configurations
 storage:
