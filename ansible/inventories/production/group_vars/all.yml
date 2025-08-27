@@ -32,7 +32,8 @@ storage:
   set_permissions: true
   owner: "root"
   group: "root"
-  mode: "0750"e2_version: "v1.27.7+rke2r1"
+  mode: "0750"
+  rke2_version: "v1.27.7+rke2r1"
 rke2_channel: "stable"
 
 # System settings
