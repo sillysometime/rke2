@@ -5,11 +5,31 @@
     state: directory
     mode: '0755'
 
-- name: Wait for token file to be created on first master
-  wait_for:
-    path: "{{ rke2_token_file }}"
-    timeout: 300
-  when: inventory_hostname == groups['masters'][0]
+- name: Install RKE2 on master node
+  block:
+    - name: Download RKE2 install script
+      get_url:
+        url: https://get.rke2.io
+        dest: /tmp/install-rke2.sh
+        mode: '0700'
+      when: inventory_hostname == groups['masters'][0]
+
+    - name: Execute RKE2 install script
+      shell: INSTALL_RKE2_VERSION="{{ rke2_version }}" sh /tmp/install-rke2.sh
+      when: inventory_hostname == groups['masters'][0]
+
+    - name: Start RKE2 server service
+      systemd:
+        name: rke2-server
+        state: started
+        enabled: yes
+      when: inventory_hostname == groups['masters'][0]
+
+    - name: Wait for token file to be created on first master
+      wait_for:
+        path: "{{ rke2_token_file }}"
+        timeout: 600
+      when: inventory_hostname == groups['masters'][0]
 
 - name: Get node token from first master
   slurp:
