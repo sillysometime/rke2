@@ -5,14 +5,33 @@
     state: directory
     mode: '0755'
 
-- name: Get node token from first master
-  slurp:
-    src: "{{ rke2_data_dir }}/server/node-token"
-  register: node_token
-  delegate_to: "{{ groups['masters'][0] }}"
-  when: 
-    - rke2_type == "agent" or inventory_hostname != groups['masters'][0]
-    - groups['masters'] | length > 0
+- name: Generate token if not provided
+  block:
+    - name: Create random token
+      command: openssl rand -hex 32
+      register: generated_token
+      when: 
+        - generate_token | default(true)
+        - rke2_token is not defined
+        - inventory_hostname == groups['masters'][0]
+      
+    - name: Set token fact
+      set_fact:
+        rke2_token: "{{ generated_token.stdout }}"
+      when:
+        - generate_token | default(true)
+        - rke2_token is not defined
+        - inventory_hostname == groups['masters'][0]
+
+    - name: Get node token from first master
+      slurp:
+        src: "{{ rke2_token_file }}"
+      register: node_token
+      delegate_to: "{{ groups['masters'][0] }}"
+      when: 
+        - rke2_type == "agent" or inventory_hostname != groups['masters'][0]
+        - groups['masters'] | length > 0
+      ignore_errors: yes
 
 - name: Create RKE2 config file for masters
   template:
