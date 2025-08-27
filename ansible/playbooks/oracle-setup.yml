@@ -18,10 +18,18 @@
         state: present
       when: epel_repository | default(true)
 
-    - name: Update all packages
-      yum:
-        name: '*'
-        state: latest
+    - name: Remove RKE2 repositories if they exist
+      file:
+        path: "/etc/yum.repos.d/rancher-rke2-1.27.repo"
+        state: absent
+      ignore_errors: true
+
+    - name: Update all packages (excluding RKE2)
+      shell: |
+        yum clean all
+        yum --disablerepo=rancher-rke2* update -y
+      args:
+        warn: false
       when: update_packages | default(true)
 
     - name: Install required packages
