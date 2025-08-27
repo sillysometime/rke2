@@ -18,36 +18,47 @@
         state: present
       when: epel_repository | default(true)
 
-    - name: Remove RKE2 repositories if they exist
-      file:
-        path: "/etc/yum.repos.d/rancher-rke2-1.27.repo"
-        state: absent
+    - name: Clean up all RKE2 repository files
+      shell: |
+        rm -f /etc/yum.repos.d/rancher-rke2*
+        rm -f /etc/yum.repos.d/rke2*
+      args:
+        warn: false
       ignore_errors: true
 
-    - name: Update all packages (excluding RKE2)
+    - name: Clean yum cache and refresh repositories
       shell: |
         yum clean all
-        yum --disablerepo=rancher-rke2* update -y
+        rm -rf /var/cache/yum/*
+        yum makecache fast
+      args:
+        warn: false
+
+    - name: Update base system packages
+      shell: |
+        yum update -y --disablerepo=* --enablerepo=ol7_latest,ol7_optional_latest,ol7_addons,ol7_UEKR6,epel
       args:
         warn: false
       when: update_packages | default(true)
 
     - name: Install required packages
-      yum:
-        name:
-          - yum-utils
-          - device-mapper-persistent-data
-          - lvm2
-          - container-selinux
-          - iptables
-          - libnetfilter_conntrack
-          - libnfnetlink
-          - libnftnl
-          - policycoreutils-python
-          - conntrack-tools
-          - socat
-          - nfs-utils
-          - iscsi-initiator-utils
+      shell: |
+        yum install -y --disablerepo=* --enablerepo=ol7_latest,ol7_optional_latest,ol7_addons,ol7_UEKR6,epel \
+          yum-utils \
+          device-mapper-persistent-data \
+          lvm2 \
+          container-selinux \
+          iptables \
+          libnetfilter_conntrack \
+          libnfnetlink \
+          libnftnl \
+          policycoreutils-python \
+          conntrack-tools \
+          socat \
+          nfs-utils \
+          iscsi-initiator-utils
+      args:
+        warn: false
           - tar
           - rsync
         state: present
