@@ -7,6 +7,24 @@
 
 - name: Install RKE2 on master node
   block:
+    - name: Check RKE2 repository URLs
+      uri:
+        url: "{{ item }}"
+        method: GET
+        status_code: [200, 301, 302]
+      register: repo_check
+      ignore_errors: yes
+      with_items:
+        - "https://rpm.rancher.io/rke2/stable/1.27/centos/7/x86_64/repodata/repomd.xml"
+        - "https://rpm.rancher.io/rke2/stable/1.27/rhel/7/x86_64/repodata/repomd.xml"
+        - "https://rpm.rancher.io/rke2/latest/centos/7/x86_64/repodata/repomd.xml"
+      when: inventory_hostname == groups['masters'][0]
+
+    - name: Set RKE2 installation method based on repository availability
+      set_fact:
+        use_rpm_install: "{{ repo_check.results | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | list | length > 0 }}"
+      when: inventory_hostname == groups['masters'][0]
+
     - name: Create RKE2 installation directory
       file:
         path: /root/rke2-install
@@ -21,7 +39,19 @@
         mode: '0700'
       when: inventory_hostname == groups['masters'][0]
 
-    - name: Set installation environment
+    - name: Install RKE2 using RPM method
+      shell: |
+        export INSTALL_RKE2_VERSION="{{ rke2_version }}"
+        export INSTALL_RKE2_TYPE="server"
+        export INSTALL_RKE2_METHOD="rpm"
+        sh /root/rke2-install/install.sh
+      args:
+        executable: /bin/bash
+      when: 
+        - inventory_hostname == groups['masters'][0]
+        - use_rpm_install | bool
+
+    - name: Install RKE2 using tar method
       shell: |
         export INSTALL_RKE2_VERSION="{{ rke2_version }}"
         export INSTALL_RKE2_TYPE="server"
@@ -29,7 +59,9 @@
         sh /root/rke2-install/install.sh
       args:
         executable: /bin/bash
-      when: inventory_hostname == groups['masters'][0]
+      when: 
+        - inventory_hostname == groups['masters'][0]
+        - not use_rpm_install | bool
 
     - name: Start RKE2 server service
       systemd:
