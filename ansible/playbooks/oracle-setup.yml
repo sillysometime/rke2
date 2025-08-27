@@ -35,19 +35,33 @@
         warn: false
 
     - name: Update base system packages
-      shell: |
-        yum update -y --disablerepo=* --enablerepo=ol7_latest,ol7_optional_latest,ol7_addons,ol7_UEKR6,epel
+      command: yum update -y --disablerepo=* --enablerepo=ol7_latest,ol7_optional_latest,ol7_addons,ol7_UEKR6,epel
       args:
         warn: false
       when: update_packages | default(true)
 
+    - name: Create temporary package list
+      copy:
+        dest: /tmp/required-packages.txt
+        content: |
+          yum-utils
+          device-mapper-persistent-data
+          lvm2
+          container-selinux
+          iptables
+          libnetfilter_conntrack
+          libnfnetlink
+          libnftnl
+          policycoreutils-python
+          conntrack-tools
+          socat
+          nfs-utils
+          iscsi-initiator-utils
+
     - name: Install required packages
-      shell: |
-        yum install -y --disablerepo=* --enablerepo=ol7_latest,ol7_optional_latest,ol7_addons,ol7_UEKR6,epel \
-          yum-utils \
-          device-mapper-persistent-data \
-          lvm2 \
-          container-selinux \
+      command: yum install -y --disablerepo=* --enablerepo=ol7_latest,ol7_optional_latest,ol7_addons,ol7_UEKR6,epel $(cat /tmp/required-packages.txt)
+      args:
+        warn: false
           iptables \
           libnetfilter_conntrack \
           libnfnetlink \
