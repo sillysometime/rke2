@@ -34,12 +34,13 @@
       args:
         warn: false
 
-    - name: Configure YUM to exclude RKE2 repositories
-      copy:
-        dest: /etc/yum.conf.d/99-rke2-exclude.conf
-        content: |
-          [main]
-          exclude=rke2-*
+    - name: Configure YUM to exclude RKE2 packages
+      lineinfile:
+        path: /etc/yum.conf
+        line: 'exclude=rke2-*'
+        insertafter: '^\[main\]'
+        state: present
+        backup: yes
 
     - name: Update base system packages
       yum:
