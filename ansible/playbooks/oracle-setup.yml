@@ -50,7 +50,7 @@
         exclude: "rke2-*"
       when: update_packages | default(true)
 
-    - name: Install required packages
+    - name: Install required packages (base)
       yum:
         name:
           - yum-utils
@@ -66,24 +66,11 @@
           - socat
           - nfs-utils
           - iscsi-initiator-utils
-        state: present
-        disablerepo: "*"
-        enablerepo: "ol7_latest,ol7_optional_latest,ol7_addons,ol7_UEKR6,epel"
-        exclude: "rke2-*"
-          iptables \
-          libnetfilter_conntrack \
-          libnfnetlink \
-          libnftnl \
-          policycoreutils-python \
-          conntrack-tools \
-          socat \
-          nfs-utils \
-          iscsi-initiator-utils
-      args:
-        warn: false
           - tar
           - rsync
         state: present
+        disablerepo: "*"
+        enablerepo: "ol7_latest,ol7_optional_latest,ol7_addons,ol7_UEKR6,epel"
 
     - name: Configure kernel modules
       copy:
