@@ -1,7 +1,15 @@
 ---
-# RKE2 Common Va# Installation settings
+# RKE2 Version and Channel
+rke2_version: "v1.27.7+rke2r1"
+rke2_channel: "stable"
+
+# Installation settings
 rke2_install_method: "rpm"
 rke2_rpm_repo_url: "https://rpm.rancher.io"
+rke2_download_url: "https://get.rke2.io"
+
+# RKE2 Token for node joining
+rke2_token: "your-secure-token-here"  # ควรเปลี่ยนเป็น token ที่ปลอดภัย
 
 # RKE2 Directory configurations
 rke2_config_dir: "/etc/rancher/rke2"
