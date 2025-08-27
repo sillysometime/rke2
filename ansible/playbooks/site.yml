@@ -6,6 +6,9 @@
   serial: 1
   
   tasks:
+    - name: Include cleanup tasks
+      include_tasks: cleanup.yml
+
     - name: Include Oracle Linux setup
       include_tasks: oracle-setup.yml
       

@@ -1,0 +1,115 @@
+---
+- name: Cleanup previous RKE2 installation
+  block:
+    - name: Stop RKE2 services
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      with_items:
+        - rke2-server
+        - rke2-agent
+      ignore_errors: yes
+
+    - name: Remove RKE2 processes
+      shell: |
+        pkill -9 rke2 || true
+        pkill -9 containerd || true
+      ignore_errors: yes
+
+    - name: Remove RKE2 files and directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /var/lib/rancher/rke2
+        - /var/lib/kubelet
+        - /etc/rancher/rke2
+        - /opt/rke2
+        - /run/k3s
+        - /run/containerd
+        - /var/lib/containerd
+        - /var/run/containerd
+        - "{{ paths.data_dir }}"
+        - "{{ paths.config_dir }}"
+        - "{{ paths.etcd_dir }}"
+        - "{{ paths.containerd_dir }}"
+        - "{{ paths.log_dir }}"
+        - "{{ paths.audit_log_dir }}"
+        - "{{ paths.containerd_log_dir }}"
+      ignore_errors: yes
+
+    - name: Remove RKE2 configuration files
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /etc/sysctl.d/90-rke2.conf
+        - /etc/sysctl.d/99-kubernetes.conf
+        - /etc/modules-load.d/rke2-prerequisites.conf
+        - /etc/modules-load.d/containerd.conf
+        - /etc/modules-load.d/rke2.conf
+      ignore_errors: yes
+
+    - name: Remove RKE2 CNI configurations
+      file:
+        path: /etc/cni/net.d
+        state: absent
+      ignore_errors: yes
+
+    - name: Remove RPM packages
+      yum:
+        name:
+          - rke2-common
+          - rke2-server
+          - rke2-agent
+          - container*
+        state: removed
+      ignore_errors: yes
+
+    - name: Clean yum repository
+      file:
+        path: "/etc/yum.repos.d/rancher-rke2*.repo"
+        state: absent
+      ignore_errors: yes
+
+    - name: Clean yum cache
+      command: yum clean all
+      ignore_errors: yes
+
+    - name: Remove kubectl symlink
+      file:
+        path: /usr/local/bin/kubectl
+        state: absent
+      ignore_errors: yes
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Reset iptables
+      shell: |
+        iptables -F
+        iptables -X
+        iptables -t nat -F
+        iptables -t nat -X
+        iptables -t mangle -F
+        iptables -t mangle -X
+        iptables -P INPUT ACCEPT
+        iptables -P FORWARD ACCEPT
+        iptables -P OUTPUT ACCEPT
+      ignore_errors: yes
+
+    - name: Remove remaining RKE2 binaries
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /usr/local/bin/rke2
+        - /usr/local/bin/rke2-killall.sh
+        - /usr/local/bin/rke2-uninstall.sh
+      ignore_errors: yes
+
+  when:
+    - ansible_distribution == "OracleLinux"
+    - ansible_distribution_major_version == "7"
