@@ -4,8 +4,7 @@ rke2_version: "v1.27.7+rke2r1"
 rke2_channel: "stable"
 
 # Installation settings
-rke2_install_method: "rpm"
-rke2_rpm_repo_url: "https://rpm.rancher.io"
+rke2_install_method: "tar"
 rke2_download_url: "https://get.rke2.io"
 
 # RKE2 Token Configuration

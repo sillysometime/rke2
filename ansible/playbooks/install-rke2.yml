@@ -7,15 +7,28 @@
 
 - name: Install RKE2 on master node
   block:
+    - name: Create RKE2 installation directory
+      file:
+        path: /root/rke2-install
+        state: directory
+        mode: '0755'
+      when: inventory_hostname == groups['masters'][0]
+
     - name: Download RKE2 install script
       get_url:
         url: https://get.rke2.io
-        dest: /tmp/install-rke2.sh
+        dest: /root/rke2-install/install.sh
         mode: '0700'
       when: inventory_hostname == groups['masters'][0]
 
-    - name: Execute RKE2 install script
-      shell: INSTALL_RKE2_VERSION="{{ rke2_version }}" sh /tmp/install-rke2.sh
+    - name: Set installation environment
+      shell: |
+        export INSTALL_RKE2_VERSION="{{ rke2_version }}"
+        export INSTALL_RKE2_TYPE="server"
+        export INSTALL_RKE2_METHOD="tar"
+        sh /root/rke2-install/install.sh
+      args:
+        executable: /bin/bash
       when: inventory_hostname == groups['masters'][0]
 
     - name: Start RKE2 server service
