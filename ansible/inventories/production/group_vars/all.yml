@@ -1,6 +1,29 @@
 ---
-# RKE2 Common Variables
-rke2_version: "v1.27.7+rke2r1"
+# RKE2 Common Va# Installation settings
+rke2_install_method: "rpm"
+rke2_rpm_repo_url: "https://rpm.rancher.io"
+
+# RKE2 Directory configurations
+rke2_config_dir: "/etc/rancher/rke2"
+rke2_data_dir: "/data/rancher/rke2"
+rke2_bin_dir: "/usr/local/bin"
+rke2_runtime_dir: "/run/rke2"
+
+# Additional RKE2 paths
+rke2_etcd_dir: "/data/rancher/rke2/etcd"
+rke2_containerd_dir: "/data/rancher/rke2/containerd"
+rke2_kubelet_dir: "/data/rancher/rke2/agent/kubelet"
+rke2_log_dir: "/var/log/rancher/rke2"
+rke2_audit_log_dir: "/var/log/rancher/rke2/audit"
+rke2_containerd_log_dir: "/var/log/rancher/rke2/containerd"
+
+# Storage settings
+storage:
+  create_paths: true
+  set_permissions: true
+  owner: "root"
+  group: "root"
+  mode: "0750"e2_version: "v1.27.7+rke2r1"
 rke2_channel: "stable"
 
 # System settings
